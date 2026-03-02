@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 function formatTime(date: Date): string {
@@ -21,22 +21,16 @@ function formatDate(date: Date): string {
 }
 
 export default function Header() {
-  // useReducer to force re-render without the set-state-in-effect lint issue
-  const [tick, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState<Date>(new Date());
 
   useEffect(() => {
-    // Trigger initial render after mount, then every 60s
-    const interval = setInterval(forceUpdate, 60_000);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    setNow(new Date());
+    const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
   }, []);
-
-  // Compute time directly from current Date on each render
-  // On server, this will be null (no hydration mismatch since we check typeof)
-  const isClient = typeof window !== "undefined";
-  const now = isClient ? new Date() : null;
-
-  // Suppress unused variable warning
-  void tick;
 
   return (
     <motion.header
@@ -53,18 +47,20 @@ export default function Header() {
           World Pulse
         </h1>
       </div>
-      <div className="text-right">
-        {now && (
+      <div className="text-right" suppressHydrationWarning>
+        {mounted && (
           <>
             <div
               className="text-lg font-medium tabular-nums"
               style={{ fontFamily: "var(--font-jetbrains)", color: "var(--text-primary)" }}
+              suppressHydrationWarning
             >
               {formatTime(now)}
             </div>
             <div
               className="text-[10px]"
               style={{ color: "var(--text-tertiary)" }}
+              suppressHydrationWarning
             >
               {formatDate(now)}
             </div>

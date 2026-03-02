@@ -1,12 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
-function getTimeOfDayColors(): {
-  teal: string;
-  violet: string;
-  coral: string;
-} {
+function getTimeOfDayColors() {
   const hour = new Date().getHours();
 
   if (hour >= 22 || hour < 5) {
@@ -23,21 +19,14 @@ function getTimeOfDayColors(): {
 
 const DEFAULT_COLORS = { teal: "#4ECDC4", violet: "#C9B8FF", coral: "#FF8C42" };
 
-// Hour only changes once per hour, so subscribe is essentially a no-op
-function subscribe(): () => void {
-  return () => {};
-}
-
-function getSnapshot() {
-  return getTimeOfDayColors();
-}
-
-function getServerSnapshot() {
-  return DEFAULT_COLORS;
-}
-
 export default function AmbientBackground() {
-  const colors = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Start with stable defaults for SSR, update after mount
+  const [colors, setColors] = useState(DEFAULT_COLORS);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setColors(getTimeOfDayColors());
+  }, []);
 
   return (
     <div

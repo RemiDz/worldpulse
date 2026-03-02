@@ -25,8 +25,22 @@ import {
   DEFAULT_LOCATION,
   LUNAR_SIMPLE_SUMMARIES,
 } from "@/lib/constants";
-import { saveToCache, loadFromCache, isCacheStale } from "@/lib/utils";
+import { saveToCache, loadFromCache } from "@/lib/utils";
 import type { SignalData, SignalFetchState, SeverityLevel } from "@/types";
+
+const INITIAL_STATE: SignalFetchState = {
+  signals: [],
+  overall: {
+    percentage: 0,
+    severity: "calm",
+    emoji: "\uD83D\uDE0C",
+    title: "Loading\u2026",
+    subtitle: "Fetching live data",
+  },
+  guidance: "",
+  loading: true,
+  lastUpdated: null,
+};
 
 function buildSignalData(
   signalId: string,
@@ -36,9 +50,9 @@ function buildSignalData(
   unit: string,
   emojiOverride?: string,
   summaryOverride?: string
-): SignalData {
+): SignalData | null {
   const def = SIGNAL_DEFINITIONS.find((s) => s.id === signalId);
-  if (!def) throw new Error(`Unknown signal: ${signalId}`);
+  if (!def) return null;
 
   return {
     id: def.id,
@@ -63,55 +77,40 @@ interface GeoCoords {
 }
 
 export function useSignalData(): SignalFetchState {
-  const [state, setState] = useState<SignalFetchState>(() => {
-    // Try to load from cache for instant display
-    const cached = loadFromCache();
-    if (cached && !isCacheStale(REFRESH_INTERVAL)) {
-      return { ...cached, loading: false };
-    }
-    return {
-      signals: [],
-      overall: {
-        percentage: 0,
-        severity: "calm",
-        emoji: "\uD83D\uDE0C",
-        title: "Loading\u2026",
-        subtitle: "Fetching live data",
-      },
-      guidance: "",
-      loading: true,
-      lastUpdated: null,
-    };
-  });
-
+  const [state, setState] = useState<SignalFetchState>(INITIAL_STATE);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const coordsRef = useRef<GeoCoords | null>(null);
+  const coordsRef = useRef<GeoCoords>({
+    latitude: DEFAULT_LOCATION.latitude,
+    longitude: DEFAULT_LOCATION.longitude,
+  });
 
   // Get geolocation once
   useEffect(() => {
-    if (!navigator.geolocation) {
-      coordsRef.current = {
-        latitude: DEFAULT_LOCATION.latitude,
-        longitude: DEFAULT_LOCATION.longitude,
-      };
-      return;
+    // Try to show cached data immediately
+    try {
+      const cached = loadFromCache();
+      if (cached && cached.signals.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setState({ ...cached, loading: true }); // show cached but keep loading
+      }
+    } catch {
+      // ignore cache errors
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        coordsRef.current = {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        };
-      },
-      () => {
-        coordsRef.current = {
-          latitude: DEFAULT_LOCATION.latitude,
-          longitude: DEFAULT_LOCATION.longitude,
-        };
-      },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 }
-    );
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          coordsRef.current = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          };
+        },
+        () => {
+          // Keep default location
+        },
+        { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 }
+      );
+    }
   }, []);
 
   const fetchAll = useCallback(async () => {
@@ -120,19 +119,14 @@ export function useSignalData(): SignalFetchState {
       const lunar = getLunarPhase();
       const schumann = getSchumannEstimate();
 
-      // Parallel API fetches
-      const coords = coordsRef.current ?? {
-        latitude: DEFAULT_LOCATION.latitude,
-        longitude: DEFAULT_LOCATION.longitude,
-      };
-
+      // Parallel API fetches with allSettled — individual failures use fallbacks
       const [kpResult, solarResult, aqiResult] = await Promise.allSettled([
         fetchKpIndex(),
         fetchSolarWind(),
-        fetchAirQuality(coords.latitude, coords.longitude),
+        fetchAirQuality(coordsRef.current.latitude, coordsRef.current.longitude),
       ]);
 
-      // Extract values with fallbacks
+      // Extract values with safe fallbacks
       const kpValue =
         kpResult.status === "fulfilled" ? kpResult.value.value : 2;
       const solarSpeed =
@@ -170,7 +164,7 @@ export function useSignalData(): SignalFetchState {
       const overallSeverityNum = calculateOverallSeverity(scores);
       const overallSeverity = severityFromNumber(overallSeverityNum);
 
-      // Build signal data array
+      // Build signal data array — filter out nulls defensively
       const signals: SignalData[] = [
         buildSignalData(
           "schumann",
@@ -216,7 +210,7 @@ export function useSignalData(): SignalFetchState {
           Math.round(solarSpeed),
           "km/s"
         ),
-      ];
+      ].filter((s): s is SignalData => s !== null);
 
       // Generate guidance
       const guidance = generateGuidance({
@@ -247,22 +241,85 @@ export function useSignalData(): SignalFetchState {
 
       setState(newState);
       saveToCache(newState);
-    } catch {
-      // If total failure, try cache
-      const cached = loadFromCache();
-      if (cached) {
-        setState({ ...cached, loading: false });
-      } else {
-        setState((prev) => ({ ...prev, loading: false }));
+    } catch (err) {
+      console.warn("[WorldPulse] Data fetch error:", err);
+
+      // Try cache first
+      try {
+        const cached = loadFromCache();
+        if (cached && cached.signals.length > 0) {
+          setState({ ...cached, loading: false });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      // Last resort: generate fallback data from client-side sources only
+      try {
+        const lunar = getLunarPhase();
+        const schumann = getSchumannEstimate();
+        const schumannScore = scoreSchumann(schumann.frequency);
+        const lunarScore = scoreLunar(lunar.severity);
+        const overallSeverity = severityFromNumber(
+          (schumannScore.severity + lunarScore.severity) / 2
+        );
+        const config = SEVERITY_CONFIG[overallSeverity];
+
+        const fallbackSignals: SignalData[] = [
+          buildSignalData(
+            "schumann",
+            schumannScore.percentage,
+            severityFromNumber(schumannScore.severity),
+            schumann.frequency,
+            "Hz"
+          ),
+          buildSignalData(
+            "lunar",
+            lunarScore.percentage,
+            severityFromNumber(lunarScore.severity),
+            `${lunar.illumination}%`,
+            "",
+            lunar.emoji,
+            LUNAR_SIMPLE_SUMMARIES[lunar.phase]
+          ),
+        ].filter((s): s is SignalData => s !== null);
+
+        setState({
+          signals: fallbackSignals,
+          overall: {
+            percentage: Math.round(
+              (schumannScore.percentage + lunarScore.percentage) / 2
+            ),
+            severity: overallSeverity,
+            emoji: config.emoji,
+            title: config.label,
+            subtitle: SEVERITY_SUBTITLES[overallSeverity],
+          },
+          guidance:
+            "Some signals are temporarily unavailable. Showing what we can calculate locally.",
+          loading: false,
+          lastUpdated: new Date(),
+        });
+      } catch {
+        // Absolute last resort
+        setState({
+          ...INITIAL_STATE,
+          loading: false,
+          guidance: "Unable to fetch signals right now. Please try again shortly.",
+          overall: {
+            ...INITIAL_STATE.overall,
+            title: "Connecting\u2026",
+            subtitle: "Trying to reach data sources",
+          },
+        });
       }
     }
   }, []);
 
   useEffect(() => {
-    // Small delay to let geolocation resolve
-    const timeout = setTimeout(() => {
-      fetchAll();
-    }, 500);
+    // Small delay to let geolocation resolve, then fetch
+    const timeout = setTimeout(fetchAll, 500);
 
     intervalRef.current = setInterval(fetchAll, REFRESH_INTERVAL);
 
