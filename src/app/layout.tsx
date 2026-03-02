@@ -77,12 +77,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
-          defer
-          data-domain="worldpulse.app"
-          src="https://plausible.io/js/script.js"
-          strategy="afterInteractive"
-        />
+        {process.env.NODE_ENV === "production" && (
+          <Script
+            defer
+            data-domain="worldpulse.app"
+            src="https://plausible.io/js/script.js"
+            strategy="afterInteractive"
+          />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

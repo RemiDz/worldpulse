@@ -34,7 +34,7 @@ export function getSchumannEstimate(): SchumannResult {
   const jitter = (rand1 - 0.5) * 0.6;
 
   const frequency = BASE_FREQ + hourFactor + dayFactor + jitter;
-  const clampedFreq = Math.max(7.4, Math.min(10.5, frequency));
+  const clampedFreq = Math.max(7.5, Math.min(9.8, frequency));
 
   // Amplitude varies between 8 and 18
   const amplitude = 8 + rand2 * 10;

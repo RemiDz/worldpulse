@@ -14,18 +14,20 @@ export function severityFromNumber(n: number): SeverityLevel {
 }
 
 export function scoreKp(kp: number): ScoreResult {
-  if (kp <= 1) return { severity: 0, percentage: Math.round(kp * 10) };
-  if (kp <= 2) return { severity: 1, percentage: Math.round(20 + (kp - 1) * 20) };
-  if (kp <= 4) return { severity: 2, percentage: Math.round(40 + (kp - 2) * 10) };
-  if (kp <= 6) return { severity: 3, percentage: Math.round(60 + (kp - 4) * 10) };
-  return { severity: 4, percentage: Math.min(100, Math.round(80 + (kp - 6) * 10)) };
+  // KP 0-1 → calm, 2 → mild, 3-4 → moderate, 5-6 → intense, 7+ → extreme
+  if (kp < 2) return { severity: 0, percentage: Math.round(kp / 2 * 20) };
+  if (kp < 3) return { severity: 1, percentage: Math.round(20 + (kp - 2) * 20) };
+  if (kp < 5) return { severity: 2, percentage: Math.round(40 + (kp - 3) / 2 * 20) };
+  if (kp < 7) return { severity: 3, percentage: Math.round(60 + (kp - 5) / 2 * 20) };
+  return { severity: 4, percentage: Math.min(100, Math.round(80 + (kp - 7) / 2 * 20)) };
 }
 
 export function scoreSchumann(hz: number): ScoreResult {
-  if (hz <= 7.8) return { severity: 0, percentage: Math.round(Math.max(0, (hz - 7.5) / 0.3 * 20)) };
-  if (hz <= 8.0) return { severity: 1, percentage: Math.round(20 + (hz - 7.8) / 0.2 * 20) };
-  if (hz <= 8.5) return { severity: 2, percentage: Math.round(40 + (hz - 8.0) / 0.5 * 20) };
-  if (hz <= 9.5) return { severity: 3, percentage: Math.round(60 + (hz - 8.5) / 1.0 * 20) };
+  // 7.5-7.8 → calm, 7.8-8.0 → mild, 8.0-8.5 → moderate, 8.5-9.5 → intense, 9.5+ → extreme
+  if (hz < 7.8) return { severity: 0, percentage: Math.round(Math.max(0, (hz - 7.5) / 0.3 * 20)) };
+  if (hz < 8.0) return { severity: 1, percentage: Math.round(20 + (hz - 7.8) / 0.2 * 20) };
+  if (hz < 8.5) return { severity: 2, percentage: Math.round(40 + (hz - 8.0) / 0.5 * 20) };
+  if (hz < 9.5) return { severity: 3, percentage: Math.round(60 + (hz - 8.5) / 1.0 * 20) };
   return { severity: 4, percentage: Math.min(100, Math.round(80 + (hz - 9.5) / 1.0 * 20)) };
 }
 
@@ -46,8 +48,9 @@ export function scoreAqi(aqi: number): ScoreResult {
 }
 
 export function scoreLunar(lunarSeverity: number): ScoreResult {
-  // Lunar severity is already 0-3 from the phase calculation
-  const percentage = Math.round(lunarSeverity * 25);
+  // Lunar severity is 0-3 from phase calculation. Place percentage at midpoint
+  // of each 20% band (10/30/50/70) for visual consistency with other signals.
+  const percentage = Math.round(10 + lunarSeverity * 20);
   return { severity: lunarSeverity, percentage };
 }
 
