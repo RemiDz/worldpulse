@@ -214,7 +214,7 @@ export default function CollectiveField({
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes conn-pulse {
           0%, 100% { opacity: ${connectionOpacity}; }
           50% { opacity: ${connectionOpacity + 0.15}; }

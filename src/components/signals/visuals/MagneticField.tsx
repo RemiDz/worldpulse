@@ -157,7 +157,7 @@ export default function MagneticField({ value, severity, isActive }: MagneticFie
           {kpScale.map((k) => {
             const segColor =
               k <= 3 ? "#4ECDC4" : k <= 5 ? "#FFD93D" : k <= 7 ? "#FF8C42" : "#FF6B6B";
-            const filled = k < Math.round(value);
+            const filled = k <= Math.round(value);
             return (
               <rect
                 key={k}
@@ -183,7 +183,7 @@ export default function MagneticField({ value, severity, isActive }: MagneticFie
         <GlowText value={value} suffix="KP" decimals={0} color={color} size="md" />
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes magnetic-pulse {
           0%, 100% { transform: scale(1); opacity: ${0.15 + severityNum * 0.08}; }
           50% { transform: scale(${1 + severityNum * 0.02}); opacity: ${0.25 + severityNum * 0.1}; }

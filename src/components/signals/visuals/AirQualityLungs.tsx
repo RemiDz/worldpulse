@@ -159,7 +159,7 @@ export default function AirQualityLungs({ value, severity, isActive }: AirQualit
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes particle-drift-0 {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(12px, -8px); }
