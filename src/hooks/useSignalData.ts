@@ -49,7 +49,8 @@ function buildSignalData(
   rawValue: number | string,
   unit: string,
   emojiOverride?: string,
-  summaryOverride?: string
+  summaryOverride?: string,
+  metadata?: Record<string, unknown>
 ): SignalData | null {
   const def = SIGNAL_DEFINITIONS.find((s) => s.id === signalId);
   if (!def) return null;
@@ -68,6 +69,7 @@ function buildSignalData(
     appLink: def.appLink,
     secondaryAppLink: def.secondaryAppLink,
     lastUpdated: new Date(),
+    metadata,
   };
 }
 
@@ -194,14 +196,27 @@ export function useSignalData(): SignalFetchState {
           `${lunar.illumination}%`,
           "",
           lunar.emoji,
-          LUNAR_SIMPLE_SUMMARIES[lunar.phase]
+          LUNAR_SIMPLE_SUMMARIES[lunar.phase],
+          {
+            phase: lunar.phase,
+            phaseName: lunar.name,
+            illumination: lunar.illumination,
+            dayInCycle: lunar.dayInCycle,
+          }
         ),
         buildSignalData(
           "collective",
           collectiveScore.percentage,
           severityFromNumber(collectiveScore.severity),
           Math.round(collectiveResult.severity * 25),
-          ""
+          "",
+          undefined,
+          undefined,
+          {
+            kpPercentage: kpScore.percentage,
+            solarPercentage: solarScore.percentage,
+            schumannPercentage: schumannScore.percentage,
+          }
         ),
         buildSignalData(
           "solarWind",

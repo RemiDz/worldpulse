@@ -39,5 +39,6 @@ export function getLunarPhase(date: Date = new Date()): LunarPhaseInfo {
     emoji: config.emoji,
     name: config.name,
     severity: config.severity,
+    dayInCycle: Math.round(lunarAge * 10) / 10,
   };
 }

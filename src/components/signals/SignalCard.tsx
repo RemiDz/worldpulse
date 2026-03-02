@@ -6,6 +6,12 @@ import { ChevronDown } from "lucide-react";
 import IntensityBar from "@/components/ui/IntensityBar";
 import SeverityBadge from "@/components/ui/SeverityBadge";
 import AppLinkButton from "@/components/ecosystem/AppLink";
+import SchumannWave from "@/components/signals/visuals/SchumannWave";
+import MagneticField from "@/components/signals/visuals/MagneticField";
+import AirQualityLungs from "@/components/signals/visuals/AirQualityLungs";
+import LunarOrbit from "@/components/signals/visuals/LunarOrbit";
+import CollectiveField from "@/components/signals/visuals/CollectiveField";
+import SolarCorona from "@/components/signals/visuals/SolarCorona";
 import type { SignalData } from "@/types";
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -19,6 +25,71 @@ const SEVERITY_COLORS: Record<string, string> = {
 interface SignalCardProps {
   signal: SignalData;
   index: number;
+}
+
+function SignalVisual({ signal, isActive }: { signal: SignalData; isActive: boolean }) {
+  const numericValue = typeof signal.rawValue === "number"
+    ? signal.rawValue
+    : parseFloat(String(signal.rawValue)) || 0;
+
+  switch (signal.id) {
+    case "schumann":
+      return (
+        <SchumannWave
+          value={numericValue}
+          severity={signal.severity}
+          isActive={isActive}
+        />
+      );
+    case "kp":
+      return (
+        <MagneticField
+          value={numericValue}
+          severity={signal.severity}
+          isActive={isActive}
+        />
+      );
+    case "aqi":
+      return (
+        <AirQualityLungs
+          value={numericValue}
+          severity={signal.severity}
+          isActive={isActive}
+        />
+      );
+    case "lunar":
+      return (
+        <LunarOrbit
+          severity={signal.severity}
+          isActive={isActive}
+          phase={(signal.metadata?.phase as string) ?? "full-moon"}
+          phaseName={(signal.metadata?.phaseName as string) ?? "Full Moon"}
+          illumination={(signal.metadata?.illumination as number) ?? 50}
+          dayInCycle={(signal.metadata?.dayInCycle as number) ?? 15}
+        />
+      );
+    case "collective":
+      return (
+        <CollectiveField
+          value={numericValue}
+          severity={signal.severity}
+          isActive={isActive}
+          kpPercentage={(signal.metadata?.kpPercentage as number) ?? 50}
+          solarPercentage={(signal.metadata?.solarPercentage as number) ?? 50}
+          schumannPercentage={(signal.metadata?.schumannPercentage as number) ?? 50}
+        />
+      );
+    case "solarWind":
+      return (
+        <SolarCorona
+          value={numericValue}
+          severity={signal.severity}
+          isActive={isActive}
+        />
+      );
+    default:
+      return null;
+  }
 }
 
 export default function SignalCard({ signal, index }: SignalCardProps) {
@@ -75,7 +146,7 @@ export default function SignalCard({ signal, index }: SignalCardProps) {
           </motion.div>
         </div>
 
-        {/* Row 2: intensity bar (indented to align with text, not emoji) */}
+        {/* Row 2: intensity bar */}
         <div className="mt-2.5 pl-[30px]">
           <IntensityBar
             percentage={signal.percentage}
@@ -101,12 +172,21 @@ export default function SignalCard({ signal, index }: SignalCardProps) {
               <motion.p
                 className="text-[13px] leading-relaxed"
                 style={{ color: "var(--text-secondary)", fontFamily: "var(--font-dm-sans)" }}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05, duration: 0.3 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
               >
                 {signal.simpleSummary}
               </motion.p>
+
+              {/* CINEMATIC VISUAL */}
+              <motion.div
+                initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <SignalVisual signal={signal} isActive={expanded} />
+              </motion.div>
 
               {/* Detail box */}
               <motion.div
@@ -115,9 +195,9 @@ export default function SignalCard({ signal, index }: SignalCardProps) {
                   background: "rgba(255, 255, 255, 0.02)",
                   border: "1px solid var(--border-subtle)",
                 }}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
+                transition={{ delay: 0.5, duration: 0.3 }}
               >
                 <p
                   className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em]"
@@ -140,9 +220,9 @@ export default function SignalCard({ signal, index }: SignalCardProps) {
                   background: `${stripeColor}08`,
                   border: `1px solid ${stripeColor}15`,
                 }}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.3 }}
+                transition={{ delay: 0.65, duration: 0.3 }}
               >
                 <p
                   className="text-[12px] leading-relaxed"
@@ -156,9 +236,9 @@ export default function SignalCard({ signal, index }: SignalCardProps) {
               {/* App links */}
               <motion.div
                 className="space-y-2"
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.3 }}
+                transition={{ delay: 0.8, duration: 0.3 }}
               >
                 <AppLinkButton app={signal.appLink} />
                 {signal.secondaryAppLink && (

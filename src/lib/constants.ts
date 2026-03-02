@@ -69,6 +69,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       extreme: "Very high activity. Expect strong emotional and physical responses. Prioritise rest, grounding, and gentle sound healing.",
     },
     appLink: ECOSYSTEM_APPS.earthPulse,
+    secondaryAppLink: ECOSYSTEM_APPS.sonarus,
   },
   {
     id: "kp",
@@ -132,6 +133,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       extreme: "New moon \u2014 the most powerful time for intention setting. Journal, meditate, and set clear goals for the cycle ahead.",
     },
     appLink: ECOSYSTEM_APPS.lunata,
+    secondaryAppLink: ECOSYSTEM_APPS.tidara,
   },
   {
     id: "collective",

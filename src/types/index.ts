@@ -39,6 +39,7 @@ export interface SignalData {
   appLink: AppLink;
   secondaryAppLink?: AppLink;
   lastUpdated: Date | null;
+  metadata?: Record<string, unknown>;
 }
 
 export type LunarPhase =
@@ -57,6 +58,7 @@ export interface LunarPhaseInfo {
   emoji: string;
   name: string;
   severity: number;
+  dayInCycle: number;
 }
 
 export interface GuidanceContext {
